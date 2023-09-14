@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>index.md</title>
+<title>Sample page of VC-T pt</title>
 <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
 
 <style>
@@ -382,15 +382,17 @@ code {
 <p>If you are having trouble listening to the audios, try refreshing the page.</p>
 <h1 id="contents----omit-in-toc">Contents <!-- omit in toc --></h1>
 <ul>
-<li><a href="#compared-methods">Compared methods</a>
+<li><a href="#detail-of-compared-methods">Detail of compared methods</a></li>
+<li><a href="#relation-between-vc-methods-and-their-the-number-of-training-steps">Relation between VC methods and their the number of training steps</a></li>
+<li><a href="#audio-samples">Audio samples</a>
 <ul>
-<li><a href="#female2female-conversion">female2female conversion</a></li>
-<li><a href="#female2male-conversion">female2male conversion</a></li>
-<li><a href="#male2female-conversion">male2female conversion</a></li>
+<li><a href="#f2f-conversion">F2F conversion</a></li>
+<li><a href="#f2m-conversion">F2M conversion</a></li>
+<li><a href="#m2m-conversion">M2M conversion</a></li>
 </ul>
 </li>
 </ul>
-<h1 id="compared-methods">Compared methods</h1>
+<h1 id="detail-of-compared-methods">Detail of compared methods</h1>
 <p>We trained three types of one-to-one VC models.
 Each model correspond to homo-gender conversion (<span style="font-variant:small-caps;">Female2</span>-to-<span style="font-variant:small-caps;">Female1</span>: F2F), and hetero-gender conversion (<span style="font-variant:small-caps;">Male</span>-to-<span style="font-variant:small-caps;">Female1</span>: M2F, and <span style="font-variant:small-caps;">Female1</span>-to-<span style="font-variant:small-caps;">Male</span>: F2M).</p>
 <p>In our experiments, we compared audio obtained by these methods following as:</p>
@@ -407,19 +409,158 @@ Each model correspond to homo-gender conversion (<span style="font-variant:small
 </li>
 <li><span style="font-variant:small-caps;">ConvS2S-VC</span> [Kameoka+, '20]
 <ul>
-<li>Fully convolutional seq2seq VC. Conversion with this model can be directly done. For streaming operation, the source speaker's encoder was replaced the non-causal convolution with causal one.</li>
+<li>Brief description
+<ul>
+<li>VC model based on an attentional encoder-decoder mechanism (i.e. seq2seq VC).</li>
+<li>All of the modules (source speaker's encoder, target speaker's encoder, and decoder) were fully implemented with convolution.</li>
+<li>For streaming operation, the source speaker's encoder was replaced the non-causal convolution with causal one.</li>
+<li>The number of model parameters is 12.4 million.</li>
+</ul>
+</li>
+<li>Pros😃 &amp; Cons😭
+<ul>
+<li>😃: Considers not only spectral differences but also duration differences <br> =&gt; This enables VC with speaking rate modifications.</li>
+<li>😭: If monotonic attention cannot be obtained, speech dropouts and repeats may occur =&gt; leading to the loss of linguistic content (resulting in unnatural VC).</li>
+</ul>
+</li>
 </ul>
 </li>
 <li><span style="font-variant:small-caps;">Original VC-T</span> [Kanagawa+, '23] (Section 2 in paper)
 <ul>
-<li>The RNNT-based streaming VC. The source and target speaker's encoder were built with the same modules as ConvS2S-VC. The number of model parameter is also approximately same as ConvS2S-VC.</li>
+<li>Brief description
+<ul>
+<li>The RNNT-based streaming VC (our previous work).</li>
+<li>Configured using the source and target speakers’ encoders, with the same number of ConvGLUs channels.</li>
+<li>Its joiner has three blocks consisting of a linear layer and layer normalization with 256 hidden units and ReLU.</li>
+<li>The number of model parameters is 10.7 million (approximately same as that of ConvS2S-VC).</li>
 </ul>
 </li>
-<li><span style="font-variant:small-caps;">VC-T pt</span> (Section 3.1 in paper)</li>
-<li><span style="font-variant:small-caps;">VC-T ft w/ ali</span> (Section 3.2 in paper)</li>
-<li><span style="font-variant:small-caps;">VC-T ft w/o ali</span> (Section 3.2 in paper)</li>
+<li>Pros😃 &amp; Cons😭
+<ul>
+<li>😃
+<ul>
+<li>Has the same advantages as ConvS2S-VC.</li>
+<li><strong>Guarantees monotonic alignment, thus successfully avoiding the loss of linguistic content that is a problem with ConvS2S-VC.</strong></li>
 </ul>
-<h2 id="female2female-conversion">female2female conversion</h2>
+</li>
+<li>😭
+<ul>
+<li><strong>Training demands a substantial amount of memory because it involves a three-dimensional tensor</strong>, whereas seq2seq VC training uses
+a two-dimensional matrix. <br> =&gt; <strong>This requires time-consuming training.</strong></li>
+<li><strong>Requires guiding alignment, which are generated from manually annotated phoneme labels with labor-intensive efforts.</strong> <br> =&gt; This is essential to stabilize training.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><span style="font-variant:small-caps;">VC-T pt</span> (Section 3.1 in paper)
+<ul>
+<li>Brief description
+<ul>
+<li>Proposed VC-T pre-training</li>
+<li>Align the input and output spectra using DTW based on their spectral similarity to ensure they have the same length <br> =&gt; Thus, the VC-T joiner output forms a two-dimensional. This allows us to optimize VC-T using a simple L1 loss.</li>
+</ul>
+</li>
+<li>Pros😃
+<ul>
+<li>ensures that VC-T can output a better spectral prediction at the start of fine-tuning phase <br> =&gt; <strong>leading to faster convergence and easing training complexity</strong></li>
+<li>Drastically reduce the memory usage in pre-training because VC-T outputs not three-dimensional tensor but a two-dimensional matrix.</li>
+<li>Pre-training can be done <strong>without guiding alignment</strong>.</li>
+</ul>
+</li>
+<li><strong>(Tiny)</strong> cons😭
+<ul>
+<li>The transition probability within VC-T output cannot be trained during pre-training. <br>
+=&gt; For inference, we need to estimate the target speaker’s spectrum from the VC with the source spectrum input that was forced to transition by sequentially incrementing both frame indices.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><span style="font-variant:small-caps;">VC-T ft w/ ali</span> (Section 3.2 in paper)
+<ul>
+<li>Fine-tuned VC-T, initialized with <span style="font-variant:small-caps;">VC-T pt</span>, using guiding alignment as well as <span style="font-variant:small-caps;">Original VC-T</span>.</li>
+<li><strong>Can obtain good performance in a small training step</strong> due to better initial values thanks to pre-training😃</li>
+</ul>
+</li>
+<li><span style="font-variant:small-caps;">VC-T ft w/o ali</span> (Section 3.2 in paper)
+<ul>
+<li>Fine-tuned VC-T, initialized with <span style="font-variant:small-caps;">VC-T pt</span>.</li>
+<li>As well as <span style="font-variant:small-caps;">VC-T ft w/ ali</span>, a good performance can be achieved in a small training step😃</li>
+<li><strong>Can be trained without guiding alignment unlike <span style="font-variant:small-caps;">VC-T ft w/ ali</span>😃</strong></li>
+<li><strong>Won best subjective evaluation scores in all of compared VC🤗🤗</strong></li>
+</ul>
+</li>
+</ul>
+<h1 id="relation-between-vc-methods-and-their-the-number-of-training-steps">Relation between VC methods and their the number of training steps</h1>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Steps</th>
+<th></th>
+<th>Total training time [days]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-</td>
+<td>Pre-training</td>
+<td>Training or fine-tuning</td>
+<td>-</td>
+</tr>
+<tr>
+<td><span style="font-variant:small-caps;">ConvS2S-VC</span></td>
+<td>-</td>
+<td>1000k</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td><span style="font-variant:small-caps;">Original VC-T 100k</span></td>
+<td>-</td>
+<td>100k</td>
+<td>1.4</td>
+</tr>
+<tr>
+<td><span style="font-variant:small-caps;">Original VC-T 1000k</span></td>
+<td>-</td>
+<td>1000k</td>
+<td>14.4</td>
+</tr>
+<tr>
+<td><span style="font-variant:small-caps;">VC-T pt</span></td>
+<td>1000k</td>
+<td>-</td>
+<td>3.4</td>
+</tr>
+<tr>
+<td><span style="font-variant:small-caps;">VC-T w/ ali 100k</span></td>
+<td>1000k</td>
+<td>100k</td>
+<td>4.8 (=3.4+1.4)</td>
+</tr>
+<tr>
+<td><span style="font-variant:small-caps;">VC-T w/ ali 1000k</span></td>
+<td>1000k</td>
+<td>1000k</td>
+<td>15.8 (=3.4+14.4)</td>
+</tr>
+<tr>
+<td><span style="font-variant:small-caps;">VC-T w/o ali 100k</span></td>
+<td>1000k</td>
+<td>100k</td>
+<td>4.8 (=3.4+1.4)</td>
+</tr>
+<tr>
+<td><span style="font-variant:small-caps;">VC-T w/o ali 1000k</span></td>
+<td>1000k</td>
+<td>1000k</td>
+<td>15.8 (=3.4+14.4)</td>
+</tr>
+</tbody>
+</table>
+<h1 id="audio-samples">Audio samples</h1>
+<h2 id="f2f-conversion">F2F conversion</h2>
 <table>
 <thead>
 <tr>
@@ -525,7 +666,7 @@ Each model correspond to homo-gender conversion (<span style="font-variant:small
 </tbody>
 </table>
 <!-- 25, 28, 29, 30, 31 -->
-<h2 id="female2male-conversion">female2male conversion</h2>
+<h2 id="f2m-conversion">F2M conversion</h2>
 <table>
 <thead>
 <tr>
@@ -631,7 +772,7 @@ Each model correspond to homo-gender conversion (<span style="font-variant:small
 </tbody>
 </table>
 <!-- 10, 14, 19, 23, 24 -->
-<h2 id="male2female-conversion">male2female conversion</h2>
+<h2 id="m2m-conversion">M2M conversion</h2>
 <table>
 <thead>
 <tr>
@@ -737,6 +878,5 @@ Each model correspond to homo-gender conversion (<span style="font-variant:small
 </tbody>
 </table>
 <!-- 54, 55, 62, 64, 68 -->
-
 </body>
 </html>

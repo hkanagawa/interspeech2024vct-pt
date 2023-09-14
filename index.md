@@ -18,14 +18,14 @@ Submit to [IEEE ICASSP 2024](https://2024.ieeeicassp.org/) <!-- on 20th-24th Aug
 If you are having trouble listening to the audios, try refreshing the page.
 
 # Contents <!-- omit in toc -->
+- [Detail of compared methods](#detail-of-compared-methods)
+- [Relation between VC methods and their the number of training steps](#relation-between-vc-methods-and-their-the-number-of-training-steps)
+- [Audio samples](#audio-samples)
+  - [F2F conversion](#f2f-conversion)
+  - [F2M conversion](#f2m-conversion)
+  - [M2M conversion](#m2m-conversion)
 
-- [Compared methods](#compared-methods)
-  - [female2female conversion](#female2female-conversion)
-  - [female2male conversion](#female2male-conversion)
-  - [male2female conversion](#male2female-conversion)
-
-
-# Compared methods
+# Detail of compared methods
 
 We trained three types of one-to-one VC models.
 Each model correspond to homo-gender conversion (<span style="font-variant:small-caps;">Female2</span>-to-<span style="font-variant:small-caps;">Female1</span>: F2F), and hetero-gender conversion (<span style="font-variant:small-caps;">Male</span>-to-<span style="font-variant:small-caps;">Female1</span>: M2F, and <span style="font-variant:small-caps;">Female1</span>-to-<span style="font-variant:small-caps;">Male</span>: F2M).
@@ -36,13 +36,65 @@ In our experiments, we compared audio obtained by these methods following as:
 - [oracle] Analytic-resynthesis (<span style="font-variant:small-caps;">Resyn</span>)
   - extracted spectra were just vocoded by HiFi-GAN (v1)
 - <span style="font-variant:small-caps;">ConvS2S-VC</span> [Kameoka+, '20]
-  - Fully convolutional seq2seq VC. Conversion with this model can be directly done. For streaming operation, the source speaker's encoder was replaced the non-causal convolution with causal one.
+  - Brief description
+    - VC model based on an attentional encoder-decoder mechanism (i.e. seq2seq VC).
+    - All of the modules (source speaker's encoder, target speaker's encoder, and decoder) were fully implemented with convolution.
+    - For streaming operation, the source speaker's encoder was replaced the non-causal convolution with causal one.
+    - The number of model parameters is 12.4 million.
+  - Pros😃 & Cons😭
+    - 😃: Considers not only spectral differences but also duration differences <br> => This enables VC with speaking rate modifications.
+    - 😭: If monotonic attention cannot be obtained, speech dropouts and repeats may occur => leading to the loss of linguistic content (resulting in unnatural VC).
 - <span style="font-variant:small-caps;">Original VC-T</span> [Kanagawa+, '23] (Section 2 in paper)
-  - The RNNT-based streaming VC. The source and target speaker's encoder were built with the same modules as ConvS2S-VC. The number of model parameter is also approximately same as ConvS2S-VC.
+  - Brief description
+    - The RNNT-based streaming VC (our previous work).
+    - Configured using the source and target speakers’ encoders, with the same number of ConvGLUs channels.
+    - Its joiner has three blocks consisting of a linear layer and layer normalization with 256 hidden units and ReLU.
+    - The number of model parameters is 10.7 million (approximately same as that of ConvS2S-VC).
+  - Pros😃 & Cons😭
+    - 😃
+        - Has the same advantages as ConvS2S-VC.
+        - **Guarantees monotonic alignment, thus successfully avoiding the loss of linguistic content that is a problem with ConvS2S-VC.**
+    - 😭
+        - **Training demands a substantial amount of memory because it involves a three-dimensional tensor**, whereas seq2seq VC training uses
+a two-dimensional matrix. <br> => **This requires time-consuming training.**
+        - **Requires guiding alignment, which are generated from manually annotated phoneme labels with labor-intensive efforts.** <br> => This is essential to stabilize training.
 - <span style="font-variant:small-caps;">VC-T pt</span> (Section 3.1 in paper)
+  - Brief description
+    - Proposed VC-T pre-training
+    - Align the input and output spectra using DTW based on their spectral similarity to ensure they have the same length <br> => Thus, the VC-T joiner output forms a two-dimensional. This allows us to optimize VC-T using a simple L1 loss.
+  - Pros😃
+    - ensures that VC-T can output a better spectral prediction at the start of fine-tuning phase <br> => **leading to faster convergence and easing training complexity**
+    - Drastically reduce the memory usage in pre-training because VC-T outputs not three-dimensional tensor but a two-dimensional matrix.
+    - Pre-training can be done **without guiding alignment**.
+  - **(Tiny)** cons😭
+    - The transition probability within VC-T output cannot be trained during pre-training. <br>
+    => For inference, we need to estimate the target speaker’s spectrum from the VC with the source spectrum input that was forced to transition by sequentially incrementing both frame indices.
 - <span style="font-variant:small-caps;">VC-T ft w/ ali</span> (Section 3.2 in paper)
+    - Fine-tuned VC-T, initialized with <span style="font-variant:small-caps;">VC-T pt</span>, using guiding alignment as well as <span style="font-variant:small-caps;">Original VC-T</span>.
+    - **Can obtain good performance in a small training step** due to better initial values thanks to pre-training😃
 - <span style="font-variant:small-caps;">VC-T ft w/o ali</span> (Section 3.2 in paper)
-## female2female conversion
+    - Fine-tuned VC-T, initialized with <span style="font-variant:small-caps;">VC-T pt</span>.
+    - As well as <span style="font-variant:small-caps;">VC-T ft w/ ali</span>, a good performance can be achieved in a small training step😃
+    - **Can be trained without guiding alignment unlike <span style="font-variant:small-caps;">VC-T ft w/ ali</span>😃**
+    - **Won best subjective evaluation scores in all of compared VC🤗🤗**
+
+# Relation between VC methods and their the number of training steps
+| Method              | Steps        |                         | Total training time [days] |
+|---------------------|--------------|-------------------------|----------------------------|
+| -                   | Pre-training | Training or fine-tuning | -                          |
+| <span style="font-variant:small-caps;">ConvS2S-VC</span>          | -            | 1000k                   | N/A                        |
+| <span style="font-variant:small-caps;">Original VC-T 100k</span>  | -            | 100k                    | 1.4                        |
+| <span style="font-variant:small-caps;">Original VC-T 1000k</span> | -            | 1000k                   | 14.4                       |
+| <span style="font-variant:small-caps;">VC-T pt</span>             | 1000k        | -                       | 3.4                        |
+| <span style="font-variant:small-caps;">VC-T w/ ali 100k</span>    | 1000k        | 100k                    | 4.8 (=3.4+1.4)             |
+| <span style="font-variant:small-caps;">VC-T w/ ali 1000k</span>   | 1000k        | 1000k                   | 15.8 (=3.4+14.4)           |
+| <span style="font-variant:small-caps;">VC-T w/o ali 100k</span>    | 1000k        | 100k                    | 4.8 (=3.4+1.4)             |
+| <span style="font-variant:small-caps;">VC-T w/o ali 1000k</span>   | 1000k        | 1000k                   | 15.8 (=3.4+14.4)           |
+
+
+# Audio samples
+
+## F2F conversion
 
  Utterance | Source speaker | Target speaker<br>(oracle) | | Converted speech | | | | | | | |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---  |
@@ -54,7 +106,7 @@ In our experiments, we compared audio obtained by these methods following as:
 | sample 5 | <audio src='./demo_page/female2female/resource/031.src_gt.wav' id="audio_tag_31_src_gt"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_31_src_gt').play()">&#9654;</span></div> | <audio src='./demo_page/female2female/resource/031.tgt_gt.wav' id="audio_tag_31_tgt_gt"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_31_tgt_gt').play()">&#9654;</span></div> | <audio src='./demo_page/female2female/resource/031.resyn.wav' id="audio_tag_31_resyn"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_31_resyn').play()">&#9654;</span></div> | <audio src='./demo_page/female2female/resource/031.convs2s-vc.wav' id="audio_tag_31_convs2s-vc"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_31_convs2s-vc').play()">&#9654;</span></div> | <audio src='./demo_page/female2female/resource/031.vc-t_flatstart_00100k_step.wav' id="audio_tag_31_vc-t_flatstart_00100k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_31_vc-t_flatstart_00100k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2female/resource/031.vc-t_flatstart_01000k_step.wav' id="audio_tag_31_vc-t_flatstart_01000k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_31_vc-t_flatstart_01000k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2female/resource/031.vc-t_pt.wav' id="audio_tag_31_vc-t_pt"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_31_vc-t_pt').play()">&#9654;</span></div> | <audio src='./demo_page/female2female/resource/031.vc-t_w-pt_w-ali_00100k_step.wav' id="audio_tag_31_vc-t_w-pt_w-ali_00100k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_31_vc-t_w-pt_w-ali_00100k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2female/resource/031.vc-t_w-pt_w-ali_01000k_step.wav' id="audio_tag_31_vc-t_w-pt_w-ali_01000k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_31_vc-t_w-pt_w-ali_01000k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2female/resource/031.vc-t_w-pt_wo-ali_00100k_step.wav' id="audio_tag_31_vc-t_w-pt_wo-ali_00100k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_31_vc-t_w-pt_wo-ali_00100k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2female/resource/031.vc-t_w-pt_wo-ali_01000k_step.wav' id="audio_tag_31_vc-t_w-pt_wo-ali_01000k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_31_vc-t_w-pt_wo-ali_01000k_step').play()">&#9654;</span></div> 
 <!-- 25, 28, 29, 30, 31 -->
 
-## female2male conversion
+## F2M conversion
 
  Utterance | Source speaker | Target speaker<br>(oracle) | | Converted speech | | | | | | | |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---  |
@@ -66,7 +118,7 @@ In our experiments, we compared audio obtained by these methods following as:
 | sample 5 | <audio src='./demo_page/female2male/resource/024.src_gt.wav' id="audio_tag_24_src_gt"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_src_gt').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.tgt_gt.wav' id="audio_tag_24_tgt_gt"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_tgt_gt').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.resyn.wav' id="audio_tag_24_resyn"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_resyn').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.convs2s-vc.wav' id="audio_tag_24_convs2s-vc"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_convs2s-vc').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_flatstart_00100k_step.wav' id="audio_tag_24_vc-t_flatstart_00100k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_flatstart_00100k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_flatstart_01000k_step.wav' id="audio_tag_24_vc-t_flatstart_01000k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_flatstart_01000k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_pt.wav' id="audio_tag_24_vc-t_pt"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_pt').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_w-pt_w-ali_00100k_step.wav' id="audio_tag_24_vc-t_w-pt_w-ali_00100k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_w-pt_w-ali_00100k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_w-pt_w-ali_01000k_step.wav' id="audio_tag_24_vc-t_w-pt_w-ali_01000k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_w-pt_w-ali_01000k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_w-pt_wo-ali_00100k_step.wav' id="audio_tag_24_vc-t_w-pt_wo-ali_00100k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_w-pt_wo-ali_00100k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_w-pt_wo-ali_01000k_step.wav' id="audio_tag_24_vc-t_w-pt_wo-ali_01000k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_w-pt_wo-ali_01000k_step').play()">&#9654;</span></div>
 <!-- 10, 14, 19, 23, 24 -->
 
-## male2female conversion
+## M2M conversion
 
  Utterance | Source speaker | Target speaker<br>(oracle) | | Converted speech | | | | | | | |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---  |
