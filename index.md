@@ -23,7 +23,7 @@ If you are having trouble listening to the audios, try refreshing the page.
 - [Audio samples](#audio-samples)
   - [F2F conversion](#f2f-conversion)
   - [F2M conversion](#f2m-conversion)
-  - [M2M conversion](#m2m-conversion)
+  - [M2F conversion](#m2f-conversion)
 
 # Detail of compared methods
 
@@ -76,7 +76,7 @@ a two-dimensional matrix. <br> => **This requires time-consuming training.**
     - Fine-tuned VC-T, initialized with <span style="font-variant:small-caps;">VC-T pt</span>.
     - As well as <span style="font-variant:small-caps;">VC-T ft w/ ali</span>, a good performance can be achieved in a small training step😃
     - **Can be trained without guiding alignment unlike <span style="font-variant:small-caps;">VC-T ft w/ ali</span>😃**
-    - **Won best subjective evaluation scores in all of compared VC🤗🤗**
+    - **Won best subjective evaluation scores in all of compared VC models 🤗🤗**
 
 # Relation between VC methods and their the number of training steps
 | Method              | Steps        |                         | Total training time [days] |
@@ -118,7 +118,7 @@ a two-dimensional matrix. <br> => **This requires time-consuming training.**
 | sample 5 | <audio src='./demo_page/female2male/resource/024.src_gt.wav' id="audio_tag_24_src_gt"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_src_gt').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.tgt_gt.wav' id="audio_tag_24_tgt_gt"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_tgt_gt').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.resyn.wav' id="audio_tag_24_resyn"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_resyn').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.convs2s-vc.wav' id="audio_tag_24_convs2s-vc"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_convs2s-vc').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_flatstart_00100k_step.wav' id="audio_tag_24_vc-t_flatstart_00100k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_flatstart_00100k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_flatstart_01000k_step.wav' id="audio_tag_24_vc-t_flatstart_01000k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_flatstart_01000k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_pt.wav' id="audio_tag_24_vc-t_pt"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_pt').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_w-pt_w-ali_00100k_step.wav' id="audio_tag_24_vc-t_w-pt_w-ali_00100k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_w-pt_w-ali_00100k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_w-pt_w-ali_01000k_step.wav' id="audio_tag_24_vc-t_w-pt_w-ali_01000k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_w-pt_w-ali_01000k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_w-pt_wo-ali_00100k_step.wav' id="audio_tag_24_vc-t_w-pt_wo-ali_00100k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_w-pt_wo-ali_00100k_step').play()">&#9654;</span></div> | <audio src='./demo_page/female2male/resource/024.vc-t_w-pt_wo-ali_01000k_step.wav' id="audio_tag_24_vc-t_w-pt_wo-ali_01000k_step"></audio><div class="audio_buttons" role="button"><span onclick="document.getElementById('audio_tag_24_vc-t_w-pt_wo-ali_01000k_step').play()">&#9654;</span></div>
 <!-- 10, 14, 19, 23, 24 -->
 
-## M2M conversion
+## M2F conversion
 
  Utterance | Source speaker | Target speaker<br>(oracle) | | Converted speech | | | | | | | |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---  |
