@@ -6,15 +6,8 @@
 <!-- ctrl+shift+pでhtml -> html出力 -->
 <!-- ctrl+shift+v プレビュー -->
 
-# Pre-training of neural transducer-based streaming voice conversion toward fast convergence and guiding alignment-free training <!-- omit in toc -->
-## Authors  <!-- omit in toc -->
-Hiroki Kanagawa*, Takafumi Moriya*, Yusuke Ijima (NTT corporation, Japan)<br>
-<span style="font-size: 80%">* equal contribution</span>
+# Pre-training Neural Transducer-based Streaming Voice Conversion for Faster Convergence and Alignment-free Training <!-- omit in toc -->
 
-## Paper  <!-- omit in toc -->
-Submit to [IEEE ICASSP 2024](https://2024.ieeeicassp.org/) <!-- on 20th-24th August 2023 -->
-
-## Note  <!-- omit in toc -->
 If you are having trouble listening to the audios, try refreshing the page.
 
 # Contents <!-- omit in toc -->
