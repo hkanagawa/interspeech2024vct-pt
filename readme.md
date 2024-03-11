@@ -1,1 +1,1 @@
-please visit https://hkanagawa.github.io/icassp2024vct-pt
+demo page of VC-T pt
